@@ -1,0 +1,449 @@
+{
+  "datasets": [
+    {
+      "name": "aba049df",
+      "displayName": "Location Data",
+      "queryLines": [
+        "select latitude,\r\n",
+        "longitude,\r\n",
+        "`GHG emissions mtons CO2e` as emission\r\n",
+        "from emissions.default.emissions_data"
+      ],
+      "catalog": "workspace",
+      "schema": "default"
+    },
+    {
+      "name": "65710923",
+      "displayName": "Emission Per Person",
+      "queryLines": [
+        "select county_state_name,\r\n",
+        "       population,\r\n",
+        "       cast(replace(`GHG emissions mtons CO2e`, ',', '') as double) / cast(population as double) as emissions_per_person\r\n",
+        "from emissions_data\r\n",
+        "order by emissions_per_person desc\r\n"
+      ],
+      "catalog": "emissions",
+      "schema": "default"
+    },
+    {
+      "name": "c19e496a",
+      "displayName": "Emission per State",
+      "queryLines": [
+        "select state_abbr,\r\n",
+        "      sum(cast(replace(`GHG emissions mtons CO2e`, ',', '') as double)) As Total_emissions \r\n",
+        "from emissions_data\r\n",
+        "group by state_abbr\r\n",
+        "order by Total_emissions desc\r\n",
+        "limit 10\r\n",
+        "       \r\n"
+      ],
+      "catalog": "emissions",
+      "schema": "default"
+    },
+    {
+      "name": "4bafc04b",
+      "displayName": "top 10 emission percentage",
+      "queryLines": [
+        "with state_totals as (\r\n",
+        "  select state_abbr,\r\n",
+        "         sum(cast(replace(`GHG emissions mtons CO2e`, ',', '') as double)) as total_emissions\r\n",
+        "  from emissions_data\r\n",
+        "  group by state_abbr\r\n",
+        "),\r\n",
+        "country_total as (\r\n",
+        "  select sum(total_emissions) as country_emissions\r\n",
+        "  from state_totals\r\n",
+        "),\r\n",
+        "top_10_states as (\r\n",
+        "  select state_abbr,\r\n",
+        "         total_emissions,\r\n",
+        "         round((total_emissions / country_emissions) * 100, 2) as pct_of_country\r\n",
+        "  from state_totals\r\n",
+        "  cross join country_total\r\n",
+        "  order by total_emissions desc\r\n",
+        "  limit 10\r\n",
+        ")\r\n",
+        "select state_abbr,\r\n",
+        "       total_emissions,\r\n",
+        "       pct_of_country,\r\n",
+        "       round(sum(pct_of_country) over (order by total_emissions desc rows between unbounded preceding and current row), 2) as cumulative_pct\r\n",
+        "from top_10_states\r\n",
+        "order by total_emissions desc\r\n",
+        "       \r\n"
+      ],
+      "catalog": "emissions",
+      "schema": "default"
+    },
+    {
+      "name": "8d902400",
+      "displayName": "County Shaming",
+      "queryLines": [
+        "select county_state_name,\r\n",
+        "       population,\r\n",
+        "       cast(replace(`GHG emissions mtons CO2e`, ',', '') as double) as total_emissions\r\n",
+        "from emissions_data\r\n",
+        "order by total_emissions desc\r\n",
+        "limit 10        \r\n"
+      ],
+      "catalog": "emissions",
+      "schema": "default"
+    }
+  ],
+  "pages": [
+    {
+      "name": "efae7cdf",
+      "displayName": "Untitled page",
+      "layout": [
+        {
+          "widget": {
+            "name": "emission-per-location",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "aba049df",
+                  "fields": [
+                    {
+                      "name": "latitude",
+                      "expression": "`latitude`"
+                    },
+                    {
+                      "name": "longitude",
+                      "expression": "`longitude`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "mark": {
+                "size": -1.8
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "emission per location"
+              },
+              "widgetType": "symbol-map",
+              "encodings": {
+                "coordinates": {
+                  "latitude": {
+                    "fieldName": "latitude"
+                  },
+                  "longitude": {
+                    "fieldName": "longitude"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "7e245695",
+            "multilineTextboxSpec": {
+              "lines": [
+                "<span style=\"text-align:center;display:block\"><span style=\"font-size: 24px;\">**UNITED STATES EMISSION BREAKDOWN**</span></span>\n",
+                "<p>&nbsp;</p>\n"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "emission-per",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "65710923",
+                  "fields": [
+                    {
+                      "name": "county_state_name",
+                      "expression": "`county_state_name`"
+                    },
+                    {
+                      "name": "emissions_per_person",
+                      "expression": "`emissions_per_person`"
+                    },
+                    {
+                      "name": "population",
+                      "expression": "`population`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Emission per person"
+              },
+              "mark": {
+                "shape": "circle",
+                "colors": [
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 2
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 2
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 3
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 4
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 5
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 6
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 7
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 8
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 9
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 10
+                  }
+                ],
+                "size": -1.4
+              },
+              "widgetType": "scatter",
+              "encodings": {
+                "x": {
+                  "fieldName": "emissions_per_person",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "population",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "extra": [
+                  {
+                    "fieldName": "county_state_name"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 2,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "4a0a8962",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "c19e496a",
+                  "fields": [
+                    {
+                      "name": "sum(Total_emissions)",
+                      "expression": "SUM(`Total_emissions`)"
+                    },
+                    {
+                      "name": "state_abbr",
+                      "expression": "`state_abbr`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "pie",
+              "encodings": {
+                "angle": {
+                  "fieldName": "sum(Total_emissions)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "emission percentage"
+                },
+                "color": {
+                  "fieldName": "state_abbr",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 8,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "4b2ea1bd",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "8d902400",
+                  "fields": [
+                    {
+                      "name": "sum(total_emissions)",
+                      "expression": "SUM(`total_emissions`)"
+                    },
+                    {
+                      "name": "county_state_name",
+                      "expression": "`county_state_name`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showDescription": true,
+                "description": "total emission by mTon of CO2e"
+              },
+              "mark": {
+                "colors": [
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 10
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 2
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 3
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 4
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 5
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 6
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 7
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 8
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 9
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 10
+                  }
+                ]
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(total_emissions)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "county_state_name",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 8,
+            "width": 6,
+            "height": 6
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    },
+    "applyModeEnabled": false
+  }
+}
