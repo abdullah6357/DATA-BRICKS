@@ -1,4 +1,4 @@
-# DATA-BRICKS
+# DATA-BRICKS Lakehouse project
 A Databricks Lakehouse project focused on United States GHG (Greenhouse Gas) Emissions Analysis.
 This repository contains SQL queries, datasets, and a Lakehouse Dashboard for exploring and visualizing CO₂-equivalent emissions data across states and counties.
 ## Project Overview
